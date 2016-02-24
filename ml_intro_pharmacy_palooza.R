@@ -139,21 +139,27 @@ library("pmml")
 saveXML(pmml(modelRFDOW), pathXML)
 #rm(modelRFDOW)
 #TODO figure out how to get it out.
-#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # Linear
-#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 # Method 5 - linear regression with CV
 install.packages("DAAG")
 library("DAAG")
-modelLMDOWCV = cv.lm(data = train, m=3, form.lm = formula(LOS~DXcode,Race+Gender+Age+Hospital+ArriveDateDOW))
+modelLMDOWCV = cv.lm(data = train, m=3, form.lm = formula(LOS~DXCODE+Race+Gender+Age+Hospital+ArriveDateDOW))
 #RMSE
-#sqrt(sum((modelLMDOWCV., train$LOS)^2)/nrow(train))
+sqrt(sum((modelLMDOWCV$Predicted - train$LOS)^2)/nrow(train))
 
 #SST
-1 - (sum((modelLMDOW$fitted.values - train$LOS)^2)/sum((mean(train$LOS) - train$LOS)^2))
+1 - (sum((modelLMDOWCV$Predicted - train$LOS)^2)/sum((mean(train$LOS) - train$LOS)^2))
+#CV
+#RMSE
+sqrt(sum((modelLMDOWCV$cvpred - train$LOS)^2)/nrow(train))
 
-predLMDOW = predict(modelLMDOW, newdata=test)
+#SST
+1 - (sum((modelLMDOWCV$cvpred - train$LOS)^2)/sum((mean(train$LOS) - train$LOS)^2))
+
+predLMDOW = predict(modelLMDOWCV$Predicted, newdata=test)
 
 #RMSE
 sqrt(sum((predLMDOW - test$LOS)^2)/nrow(test))
