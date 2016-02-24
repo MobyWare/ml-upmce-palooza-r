@@ -6,8 +6,8 @@
 
 #++++++++Read Data+++++++++++++++++++
 #unified columns - 
-#dataPath = "http://sparkdl04:50070/webhdfs/v1/palooza/data/visit_train_panda.csv?op=OPEN"
-dataPath = "C:/Users/dickm/Documents/Projects/ML/Source/UPMC/Pharmacy/visit_train_panda.csv"
+dataPath = "http://sparkdl04:50070/webhdfs/v1/palooza/data/visit_train_panda.csv?op=OPEN"
+#dataPath = "C:/Users/dickm/Documents/Projects/ML/Source/UPMC/Pharmacy/visit_train_panda.csv"
 visits = read.csv(dataPath)
 
 #++++++++++++++++++Transforms++++++++++++++++#
@@ -47,6 +47,16 @@ plot = ggplot(data=train, aes(x=train$Age,y=train$LOS)) + geom_point() + geom_sm
 plot = plot + geom_point(aes(colour=train$Hospital, size=4))
 plot + guides(size=FALSE) # remove 
 
+
+
+#++++++++++++++++++++++++++++++++Pre-Process++++++++++++++++++++++++++++++++++++++++++++++
+#Remove DXCODE's that are in test but not in train. DXCODE is sparsely populated
+test$DXCODE[which(!(test$DXCODE %in% unique(train$DXCODE)))] = NA
+#Add in random sample of missing data
+test$DXCODE[is.na(test$DXCODE)] = sample(test$DXCODE[!is.na(test$DXCODE)], sum(is.na(test$DXCODE)))
+
+
+
 #+++++++++++++++++++++++++++++Train Data+++++++++++++++++++++++++++++++++++++++++++++
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -82,7 +92,7 @@ sqrt(sum((predRF - test$LOS)^2)/nrow(test))
 #Method 3 - random forest on method DOW only arrival since we will only know that.
 # Took 1.5 hours with with 100 trees
 ptm = proc.time() # how long does it take to train the model
-modelRFDOW = randomForest(LOS~Race+Gender+Age+Hospital+ArriveDateDOW, data=train, ntree = 200)
+modelRFDOW = randomForest(LOS~DXCODE+Race+Gender+Age+Hospital+ArriveDateDOW, data=train, ntree = 200)
 proc.time() - ptm
 
 #Evaluate random forest in sample 
@@ -110,9 +120,9 @@ sqrt(sum((predRFDOW - test$LOS)^2)/nrow(test))
 #*************************************************
 #Took almost two hours to build so I just wanna save
 #OPtion one rda file
-basePath = "C:/Users/dickm/Documents/Projects/ML/DevProjects/ml-intro-spark-regression"
-#path = "C:/Users/dickm/Documents/Projects/ML/DevProjects/ml-intro-spark-regression/modelRFDOW.rda"
-basePath = "C:/Users/dickm/Documents/Projects/ML/DevProjects/repos/ml-intro-spark-regression"
+basePath = "C:/Users/dickm/Documents/Projects/ML/DevProjects/ml-upmce-palooza-r"
+#path = "C:/Users/dickm/Documents/Projects/ML/DevProjects/ml-upmce-palooza-r/modelRFDOW.rda"
+#basePath = "C:/Users/dickm/Documents/Projects/ML/DevProjects/repos/ml-upmce-palooza-r"
 pathRDA = paste(basePath, "modelRFDOW.rda", sep="/")
 pathXML = paste(basePath, "modelRFDOW.xml", sep = "/")
 
@@ -132,6 +142,25 @@ saveXML(pmml(modelRFDOW), pathXML)
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # Linear
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+# Method 5 - linear regression with CV
+install.packages("DAAG")
+library("DAAG")
+modelLMDOWCV = cv.lm(data = train, m=3, form.lm = formula(LOS~DXcode,Race+Gender+Age+Hospital+ArriveDateDOW))
+#RMSE
+#sqrt(sum((modelLMDOWCV., train$LOS)^2)/nrow(train))
+
+#SST
+1 - (sum((modelLMDOW$fitted.values - train$LOS)^2)/sum((mean(train$LOS) - train$LOS)^2))
+
+predLMDOW = predict(modelLMDOW, newdata=test)
+
+#RMSE
+sqrt(sum((predLMDOW - test$LOS)^2)/nrow(test))
+
+#SST
+1 - (sum((predLMDOW - test$LOS)^2)/sum((mean(test$LOS) - test$LOS)^2))
+
 
 
 
@@ -153,9 +182,9 @@ sqrt(sum((predLM - test$LOS)^2)/nrow(test))
 1 - (sum((predLM - test$LOS)^2)/sum((mean(test$LOS) - test$LOS)^2))
 
 
-#Method 4 - linear regression with DOW
+#Method 4 - linear regression with DOW and DXCODE
 
-modelLMDOW = lm(LOS~Race+Gender+Age+Hospital+ArriveDateDOW, data=train)
+modelLMDOW = lm(LOS~DXCODE+Race+Gender+Age+Hospital+ArriveDateDOW, data=train)
 #RMSE
 sqrt(sum((modelLMDOW$fitted.values- train$LOS)^2)/nrow(train))
 
@@ -169,4 +198,10 @@ sqrt(sum((predLMDOW - test$LOS)^2)/nrow(test))
 
 #SST
 1 - (sum((predLMDOW - test$LOS)^2)/sum((mean(test$LOS) - test$LOS)^2))
+
+
+#saving model because it took a long time to build
+save(modelLMDOW, file = paste(basePath, "modelLMDOW.rda", sep = "/"))
+
+
 
