@@ -6,8 +6,8 @@
 
 #++++++++Read Data+++++++++++++++++++
 #unified columns - 
-#dataPath = "http://sparkdl04:50070/webhdfs/v1/palooza/data/visit_train_panda.csv?op=OPEN"
-dataPath = "C:/Users/dickm/Documents/Projects/ML/Source/UPMC/Pharmacy/visit_train_panda.csv"
+dataPath = "http://sparkdl04:50070/webhdfs/v1/palooza/data/visit_train_panda.csv?op=OPEN"
+#dataPath = "C:/Users/dickm/Documents/Projects/ML/Source/UPMC/Pharmacy/visit_train_panda.csv"
 visits = read.csv(dataPath)
 
 #++++++++++++++++++Transforms++++++++++++++++#
@@ -210,11 +210,89 @@ sqrt(sum((predLMDOW - test$LOS)^2)/nrow(test))
 save(modelLMDOW, file = paste(basePath, "modelLMDOW.rda", sep = "/"))
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-#Method 6 = 
+#Method 6 - LASSO with standare or without
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#install.packages("glmnet")
 library("glmnet")
-#TO DO Complete from model I downloaded.
+#Set up the sparse matrices with dummy variables
 modelMatrixLASSO = as.matrix(sparse.model.matrix(~LOS+DXCODE+Race+Gender+Age+Hospital+ArriveDateDOW, train))
-modelLASSO = glmnet(y = train$LOS, x = modelMatrixLASSO)
+modelMatrixTestLASSO = as.matrix(sparse.model.matrix(~LOS+DXCODE+Race+Gender+Age+Hospital+ArriveDateDOW, test))
+
+#Train model
+modelLASSO = glmnet(y = train$LOS, x = modelMatrixLASSO, standardize = TRUE)
+
 plot(modelLASSO)
 
+predLASSO = predict(modelLASSO, modelMatrixTestLASSO)
+
+#RMSE
+sqrt(sum((predLASSO - test$LOS)^2)/nrow(test))
+
+#SST
+1 - (sum((predLASSO - test$LOS)^2)/sum((mean(test$LOS) - test$LOS)^2))
+
+
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#Method 7 - CV LASSO with standare or without
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#install.packages("glmnet")
+library("glmnet")
+#Set up the sparse matrices with dummy variables
+modelMatrixLASSO = as.matrix(sparse.model.matrix(~LOS+DXCODE+Race+Gender+Age+Hospital+ArriveDateDOW, train))
+modelMatrixTestLASSO = as.matrix(sparse.model.matrix(~LOS+DXCODE+Race+Gender+Age+Hospital+ArriveDateDOW, test))
+
+
+#train model 
+modelLASSOCV = cv.glmnet(y = train$LOS, x = modelMatrixLASSO)
+
+plot(modelLASSOCV)
+
+predLASSOCV = predict(modelLASSOCV, modelMatrixTestLASSO)
+
+#RMSE
+sqrt(sum((predLASSOCV - test$LOS)^2)/nrow(test))
+
+#SST
+1 - (sum((predLASSOCV - test$LOS)^2)/sum((mean(test$LOS) - test$LOS)^2))
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++
+# Validate on palooza data using Method 7 (RMSE)
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#Read in palooza val data
+visitsVal = read.csv("C:/Users/dickm/Documents/UPMC/visit_test_panda.csv")
+
+#Pre-process data
+visitsVal$VisitID = as.factor(visitsVal$VisitID)
+visitsVal$Hospital = as.factor(visitsVal$Hospital)
+visitsVal$Race = as.factor(visitsVal$Race)
+visitsVal$Gender = as.factor(visitsVal$Gender)
+visitsVal$DXCODE = as.factor(visitsVal$DXCODE)
+visitsVal$FC = as.factor(visitsVal$FC)
+visitsVal$DOC = as.factor(visitsVal$DOC)
+visitsVal$ArriveDate = as.Date(visitsVal$ArriveDate, "%m/%d/%Y")
+visitsVal$DischargeDate = as.Date(visitsVal$DischargeDate, "%m/%d/%Y")
+visitsVal$ArriveDateDOW = as.factor(weekdays(visitsVal$ArriveDate))
+visitsVal$DischargeDateDOW = as.factor(weekdays(visitsVal$DischargeDate))
+
+#Added this because I got an error with the on prediction
+#Remove DXCODE's that are in test but not in train. DXCODE is sparsely populated
+visitsVal$DXCODE[which(!(visitsVal$DXCODE %in% unique(train$DXCODE)))] = NA
+#Add in random sample of missing data
+visitsVal$DXCODE[is.na(visitsVal$DXCODE)] = sample(visitsVal$DXCODE[!is.na(visitsVal$DXCODE)], sum(is.na(visitsVal$DXCODE)))
+
+
+#From here:
+# seems I need to get rid of target
+visitsVal$LOS = NULL
+
+#Get matrix input for LSSO model
+valMatrix = as.matrix(sparse.model.matrix(~LOS+DXCODE+Race+Gender+Age+Hospital+ArriveDateDOW, visitsVal))
+
+#Predict
+predValLASSOCV = predict(modelLASSOCV, valMatrix)
+
+#RMSE
+sqrt(sum((predLASSOCV - test$LOS)^2)/nrow(test))
+
+#SST
+1 - (sum((predLASSOCV - test$LOS)^2)/sum((mean(test$LOS) - test$LOS)^2))
