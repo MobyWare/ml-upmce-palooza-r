@@ -6,8 +6,8 @@
 
 #++++++++Read Data+++++++++++++++++++
 #unified columns - 
-dataPath = "http://sparkdl04:50070/webhdfs/v1/palooza/data/visit_train_panda.csv?op=OPEN"
-#dataPath = "C:/Users/dickm/Documents/Projects/ML/Source/UPMC/Pharmacy/visit_train_panda.csv"
+#dataPath = "http://sparkdl04:50070/webhdfs/v1/palooza/data/visit_train_panda.csv?op=OPEN"
+dataPath = "C:/Users/dickm/Documents/Projects/ML/Source/UPMC/Pharmacy/visit_train_panda.csv"
 visits = read.csv(dataPath)
 
 #++++++++++++++++++Transforms++++++++++++++++#
@@ -209,5 +209,12 @@ sqrt(sum((predLMDOW - test$LOS)^2)/nrow(test))
 #saving model because it took a long time to build
 save(modelLMDOW, file = paste(basePath, "modelLMDOW.rda", sep = "/"))
 
-
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#Method 6 = 
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+library("glmnet")
+#TO DO Complete from model I downloaded.
+modelMatrixLASSO = as.matrix(sparse.model.matrix(~LOS+DXCODE+Race+Gender+Age+Hospital+ArriveDateDOW, train))
+modelLASSO = glmnet(y = train$LOS, x = modelMatrixLASSO)
+plot(modelLASSO)
 
