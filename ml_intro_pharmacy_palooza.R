@@ -298,4 +298,4 @@ predValLASSOCV = predict(modelLASSOCV, valMatrix)
 sqrt(sum((predValLASSOCV - visitsVal$LOS)^2)/nrow(visitsVal))
 
 #SST
-1 - (sum((predLASSOCV - visitsVal$LOS)^2)/sum((mean(visitsVal$LOS) - visitsVal$LOS)^2))
+1 - (sum((predValLASSOCV - visitsVal$LOS)^2)/sum((mean(visitsVal$LOS) - visitsVal$LOS)^2))
