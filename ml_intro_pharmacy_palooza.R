@@ -6,8 +6,8 @@
 
 #++++++++Read Data+++++++++++++++++++
 #unified columns - 
-#dataPath = "http://sparkdl04:50070/webhdfs/v1/palooza/data/visit_train_panda.csv?op=OPEN"
-dataPath = "C:/Users/dickm/Documents/Projects/ML/Source/UPMC/Pharmacy/visit_train_panda.csv"
+dataPath = "http://sparkdl04:50070/webhdfs/v1/palooza/data/visit_train_panda.csv?op=OPEN"
+#dataPath = "C:/Users/dickm/Documents/Projects/ML/Source/UPMC/Pharmacy/visit_train_panda.csv"
 visits = read.csv(dataPath)
 
 #++++++++++++++++++Transforms++++++++++++++++#
@@ -215,8 +215,8 @@ save(modelLMDOW, file = paste(basePath, "modelLMDOW.rda", sep = "/"))
 #install.packages("glmnet")
 library("glmnet")
 #Set up the sparse matrices with dummy variables
-modelMatrixLASSO = as.matrix(sparse.model.matrix(~LOS+DXCODE+Race+Gender+Age+Hospital+ArriveDateDOW, train))
-modelMatrixTestLASSO = as.matrix(sparse.model.matrix(~LOS+DXCODE+Race+Gender+Age+Hospital+ArriveDateDOW, test))
+modelMatrixLASSO = as.matrix(sparse.model.matrix(~DXCODE+Race+Gender+Age+Hospital+ArriveDateDOW, train))
+modelMatrixTestLASSO = as.matrix(sparse.model.matrix(~DXCODE+Race+Gender+Age+Hospital+ArriveDateDOW, test))
 
 #Train model
 modelLASSO = glmnet(y = train$LOS, x = modelMatrixLASSO, standardize = TRUE)
@@ -238,8 +238,8 @@ sqrt(sum((predLASSO - test$LOS)^2)/nrow(test))
 #install.packages("glmnet")
 library("glmnet")
 #Set up the sparse matrices with dummy variables
-modelMatrixLASSO = as.matrix(sparse.model.matrix(~LOS+DXCODE+Race+Gender+Age+Hospital+ArriveDateDOW, train))
-modelMatrixTestLASSO = as.matrix(sparse.model.matrix(~LOS+DXCODE+Race+Gender+Age+Hospital+ArriveDateDOW, test))
+modelMatrixLASSO = as.matrix(sparse.model.matrix(~DXCODE+Race+Gender+Age+Hospital+ArriveDateDOW, train))
+modelMatrixTestLASSO = as.matrix(sparse.model.matrix(~DXCODE+Race+Gender+Age+Hospital+ArriveDateDOW, test))
 
 
 #train model 
@@ -289,7 +289,7 @@ visitsVal$DXCODE[is.na(visitsVal$DXCODE)] = sample(visitsVal$DXCODE[!is.na(visit
 levels(visitsVal$DXCODE) = levels(train$DXCODE)
 
 #Get matrix input for LSSO model
-valMatrix = as.matrix(sparse.model.matrix(~LOS+DXCODE+Race+Gender+Age+Hospital+ArriveDateDOW, visitsVal))
+valMatrix = as.matrix(sparse.model.matrix(~DXCODE+Race+Gender+Age+Hospital+ArriveDateDOW, visitsVal))
 
 #Predict
 predValLASSOCV = predict(modelLASSOCV, valMatrix)
