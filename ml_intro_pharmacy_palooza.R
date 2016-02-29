@@ -210,7 +210,7 @@ sqrt(sum((predLMDOW - test$LOS)^2)/nrow(test))
 save(modelLMDOW, file = paste(basePath, "modelLMDOW.rda", sep = "/"))
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-#Method 6 - LASSO with standare or without
+#Method 6 - LASSO with or without standard set
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #install.packages("glmnet")
 library("glmnet")
@@ -233,7 +233,7 @@ sqrt(sum((predLASSO - test$LOS)^2)/nrow(test))
 
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-#Method 7 - CV LASSO with standare or without
+#Method 7 - CV LASSO with or without standard set
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #install.packages("glmnet")
 library("glmnet")
@@ -258,8 +258,8 @@ sqrt(sum((predLASSOCV - test$LOS)^2)/nrow(test))
 #++++++++++++++++++++++++++++++++++++++++++++++++++
 # Validate on palooza data using Method 7 (RMSE)
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-#Read in palooza val data
-visitsVal = read.csv("C:/Users/dickm/Documents/UPMC/visit_test_panda.csv")
+#Read in palooza val data (modified version with same factors as training)
+visitsVal = read.csv("C:/Users/dickm/Documents/UPMC/visit_test_panda_dxcode_factors.csv")
 
 #Pre-process data
 visitsVal$VisitID = as.factor(visitsVal$VisitID)
@@ -269,8 +269,8 @@ visitsVal$Gender = as.factor(visitsVal$Gender)
 visitsVal$DXCODE = as.factor(visitsVal$DXCODE)
 visitsVal$FC = as.factor(visitsVal$FC)
 visitsVal$DOC = as.factor(visitsVal$DOC)
-visitsVal$ArriveDate = as.Date(visitsVal$ArriveDate, "%m/%d/%Y")
-visitsVal$DischargeDate = as.Date(visitsVal$DischargeDate, "%m/%d/%Y")
+visitsVal$ArriveDate = as.Date(visitsVal$ArriveDate, "%Y-%m-%d") # changed format of dates
+visitsVal$DischargeDate = as.Date(visitsVal$DischargeDate, "%Y-%m-%d")  #changed the format of dates
 visitsVal$ArriveDateDOW = as.factor(weekdays(visitsVal$ArriveDate))
 visitsVal$DischargeDateDOW = as.factor(weekdays(visitsVal$DischargeDate))
 
@@ -280,10 +280,9 @@ visitsVal$DXCODE[which(!(visitsVal$DXCODE %in% unique(train$DXCODE)))] = NA
 #Add in random sample of missing data
 visitsVal$DXCODE[is.na(visitsVal$DXCODE)] = sample(visitsVal$DXCODE[!is.na(visitsVal$DXCODE)], sum(is.na(visitsVal$DXCODE)))
 
-
-#From here:
-# seems I need to get rid of target
-visitsVal$LOS = NULL
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+# Need to ensure the factor info in data frame is same as trainin
+levels(visitsVal$DXCODE) = levels(train$DXCODE)
 
 #Get matrix input for LSSO model
 valMatrix = as.matrix(sparse.model.matrix(~LOS+DXCODE+Race+Gender+Age+Hospital+ArriveDateDOW, visitsVal))
