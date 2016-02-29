@@ -6,8 +6,8 @@
 
 #++++++++Read Data+++++++++++++++++++
 #unified columns - 
-dataPath = "http://sparkdl04:50070/webhdfs/v1/palooza/data/visit_train_panda.csv?op=OPEN"
-#dataPath = "C:/Users/dickm/Documents/Projects/ML/Source/UPMC/Pharmacy/visit_train_panda.csv"
+#dataPath = "http://sparkdl04:50070/webhdfs/v1/palooza/data/visit_train_panda.csv?op=OPEN"
+dataPath = "C:/Users/dickm/Documents/Projects/ML/Source/UPMC/Pharmacy/visit_train_panda.csv"
 visits = read.csv(dataPath)
 
 #++++++++++++++++++Transforms++++++++++++++++#
@@ -258,8 +258,12 @@ sqrt(sum((predLASSOCV - test$LOS)^2)/nrow(test))
 #++++++++++++++++++++++++++++++++++++++++++++++++++
 # Validate on palooza data using Method 7 (RMSE)
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#Read saved LASSO CV model
+load("C:/Users/dickm/Documents/Projects/ML/DevProjects/repos/ml-upmce-palooza-r/modelLSSOCV.rda")
+
 #Read in palooza val data (modified version with same factors as training)
-visitsVal = read.csv("C:/Users/dickm/Documents/UPMC/visit_test_panda_dxcode_factors.csv")
+#visitsVal = read.csv("C:/Users/dickm/Documents/UPMC/visit_test_panda_dxcode_factors.csv")
+visitsVal = read.csv("C:/Users/dickm/Documents/Projects/ML/Source/UPMC/Pharmacy/visit_test_panda_dxcode_factors.csv")
 
 #Pre-process data
 visitsVal$VisitID = as.factor(visitsVal$VisitID)
@@ -291,7 +295,7 @@ valMatrix = as.matrix(sparse.model.matrix(~LOS+DXCODE+Race+Gender+Age+Hospital+A
 predValLASSOCV = predict(modelLASSOCV, valMatrix)
 
 #RMSE
-sqrt(sum((predLASSOCV - test$LOS)^2)/nrow(test))
+sqrt(sum((predValLASSOCV - visitsVal$LOS)^2)/nrow(visitsVal))
 
 #SST
-1 - (sum((predLASSOCV - test$LOS)^2)/sum((mean(test$LOS) - test$LOS)^2))
+1 - (sum((predLASSOCV - visitsVal$LOS)^2)/sum((mean(visitsVal$LOS) - visitsVal$LOS)^2))
