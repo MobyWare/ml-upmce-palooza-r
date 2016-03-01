@@ -34,20 +34,14 @@ spl = sample.split(visits$LOS, 0.75)
 train = subset(visits, spl == TRUE)
 test = subset(visits, spl == FALSE)
 
-#++++++++++++++++++++Data Visiualization+++++++++++++++++++++++++++++++#
-
-#simple hist on LOS and pie on hospital
-#Try see drugs with highest mean LOS
-tail(sort(tapply(train$LOS, train$DXCODE, mean))) 
-
-#install.packages("ggplot2")
-library("ggplot2")
-#Plot with trend line.
-plot = ggplot(data=train, aes(x=train$Age,y=train$LOS)) + geom_point() + geom_smooth(method = "lm", se=FALSE, color="red")
-plot = plot + geom_point(aes(colour=train$Hospital, size=4))
-plot + guides(size=FALSE) # remove 
 
 
+
+#Idea to construct models based on removing outliers.
+
+#Remove outliers
+visits_regular = data.frame(visits[which(visits$LOS <= 14),])
+qplot(y = LOS, x = Hospital, data=visits_regular, geom = "boxplot")
 
 #++++++++++++++++++++++++++++++++Pre-Process++++++++++++++++++++++++++++++++++++++++++++++
 #Remove DXCODE's that are in test but not in train. DXCODE is sparsely populated
