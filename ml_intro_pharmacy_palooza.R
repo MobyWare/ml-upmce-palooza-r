@@ -6,8 +6,8 @@
 
 #++++++++Read Data+++++++++++++++++++
 #unified columns - 
-dataPath = "http://sparkdl04:50070/webhdfs/v1/palooza/data/visit_train_panda.csv?op=OPEN"
-#dataPath = "C:/Users/dickm/Documents/Projects/ML/Source/UPMC/Pharmacy/visit_train_panda.csv"
+#dataPath = "http://sparkdl04:50070/webhdfs/v1/palooza/data/visit_train_panda.csv?op=OPEN"
+dataPath = "C:/Users/dickm/Documents/Projects/ML/Source/UPMC/Pharmacy/visit_train_panda.csv"
 visits = read.csv(dataPath)
 
 #++++++++++++++++++Transforms++++++++++++++++#
@@ -40,8 +40,10 @@ test = subset(visits, spl == FALSE)
 #Idea to construct models based on removing outliers.
 
 #Remove outliers
-visits_regular = data.frame(visits[which(visits$LOS <= 14),])
-qplot(y = LOS, x = Hospital, data=visits_regular, geom = "boxplot")
+visits.regular = data.frame(visits[which(visits$LOS <= 14),])
+visits.outlier = data.frame(visits[which(visits$LOS > 14),])
+
+train.regular = data.frame(visits[which(visits$LOS <= 14),])
 
 #++++++++++++++++++++++++++++++++Pre-Process++++++++++++++++++++++++++++++++++++++++++++++
 #Remove DXCODE's that are in test but not in train. DXCODE is sparsely populated
@@ -249,6 +251,42 @@ sqrt(sum((predLASSOCV - test$LOS)^2)/nrow(test))
 #SST
 1 - (sum((predLASSOCV - test$LOS)^2)/sum((mean(test$LOS) - test$LOS)^2))
 
+
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#Method 8 - SVM
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#install.packages("e1071")
+library("e1071")
+
+#train model 
+fit.svm = svm(LOS~Race+Gender+Age+Hospital, data=train)
+
+
+pred.svm = predict(fit.svm, test)
+
+#RMSE
+sqrt(sum((pred.svm - test$LOS)^2)/nrow(test))
+
+#SST
+1 - (sum((pred.svm - test$LOS)^2)/sum((mean(test$LOS) - test$LOS)^2))
+
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#Method 9 - SVM non-outlier
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#install.packages("e1071")
+library("e1071")
+
+#train model 
+fit.svmR = svm(LOS~DXCODE+Race+Gender+Age+Hospital, data=train.regular)
+
+pred.svmR = predict(fit.svm, test)
+
+#RMSE
+sqrt(sum((pred.svmR - test$LOS)^2)/nrow(test))
+
+#SST
+1 - (sum((pred.svmR - test$LOS)^2)/sum((mean(test$LOS) - test$LOS)^2))
+
 #++++++++++++++++++++++++++++++++++++++++++++++++++
 # Validate on palooza data using Method 7 (RMSE)
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -293,3 +331,6 @@ sqrt(sum((predValLASSOCV - visitsVal$LOS)^2)/nrow(visitsVal))
 
 #SST
 1 - (sum((predValLASSOCV - visitsVal$LOS)^2)/sum((mean(visitsVal$LOS) - visitsVal$LOS)^2))
+
+
+
