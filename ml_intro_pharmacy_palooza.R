@@ -277,7 +277,10 @@ sqrt(sum((pred.svm - test$LOS)^2)/nrow(test))
 library("e1071")
 
 #train model 
-fit.svmR = svm(LOS~DXCODE+Race+Gender+Age+Hospital, data=train.regular)
+ptm = proc.time()
+fit.svmR = svm(LOS~DXCODE+Race+Gender+Age+Hospital+ArriveDateDOW, data=train.regular)
+proc.time() - ptm
+
 
 pred.svmR = predict(fit.svm, test)
 
@@ -286,6 +289,26 @@ sqrt(sum((pred.svmR - test$LOS)^2)/nrow(test))
 
 #SST
 1 - (sum((pred.svmR - test$LOS)^2)/sum((mean(test$LOS) - test$LOS)^2))
+
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#Method 9 - SVM non-outlier and no dxcode
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#install.packages("e1071")
+library("e1071")
+
+#train model 
+ptm = proc.time()
+fit.svmS = svm(LOS~Race+Gender+Age+Hospital+ArriveDateDOW, data=train.regular)
+proc.time() - ptm
+
+
+pred.svmS = predict(fit.svm, test)
+
+#RMSE
+sqrt(sum((pred.svmS - test$LOS)^2)/nrow(test))
+
+#SST
+1 - (sum((pred.svmS - test$LOS)^2)/sum((mean(test$LOS) - test$LOS)^2))
 
 #++++++++++++++++++++++++++++++++++++++++++++++++++
 # Validate on palooza data using Method 7 (RMSE)
