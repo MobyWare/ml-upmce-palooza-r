@@ -1,7 +1,8 @@
 #Install libararies
 library("ggplot2")
 library(caTools)
-
+library(dplyr)
+library(tidyr)
 #Read data
 
 dataPath = "C:/Users/dickm/Documents/Projects/ML/Source/UPMC/Pharmacy/visit_train_panda.csv"
