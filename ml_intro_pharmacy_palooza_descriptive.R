@@ -52,6 +52,15 @@ plot + guides(size=FALSE) # remove
 
 #++++++++++++++++++++END VIZ+++++++++++++++++++++++++++++++#
 
+#++++++++++++++++++++Folding+++++++++++++++++++++++++++++++#
+visits.small = subset(visits, spl == TRUE)
+spl = sample.split(visits$LOS, 0.1)
+visits.folded = spread(visits.small, DXCODE, HasDXCODE, fill = FALSE, drop = TRUE)
+visits.dxcodes = data.frame(visits.folded[,seq(-16,-1)])
+
+#TODO - figure out grouping. and column name issue. Look at group by.
+#++++++++++++++++++++End folding+++++++++++++++++++++++++++++++#
+
 #++++++++++++++++++++Data Clustering+++++++++++++++++++++++++++++++#
 
 visits.cluster= data.frame(visits)
@@ -59,12 +68,7 @@ visits.cluster= data.frame(visits)
 #remove stuff I don't want to cluster
 
 visits.cluster$VisitID = NULL
-visits.cluster$VisitID = NULL
-visits.cluster$VisitID = NULL
-visits.cluster$VisitID = NULL
-visits.cluster$VisitID = NULL
-visits.cluster$VisitID = NULL
-visits.cluster$VisitID = NULL
+
 
 
 
