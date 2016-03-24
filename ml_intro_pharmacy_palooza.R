@@ -43,7 +43,7 @@ test = subset(visits, spl == FALSE)
 visits.regular = data.frame(visits[which(visits$LOS <= 14),])
 visits.outlier = data.frame(visits[which(visits$LOS > 14),])
 
-train.regular = data.frame(visits[which(visits$LOS <= 14),])
+train.regular = data.frame(visicts[which(visits$LOS <= 14),])
 
 #++++++++++++++++++++++++++++++++Pre-Process++++++++++++++++++++++++++++++++++++++++++++++
 #Remove DXCODE's that are in test but not in train. DXCODE is sparsely populated
