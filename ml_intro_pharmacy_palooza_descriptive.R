@@ -55,9 +55,31 @@ plot + guides(size=FALSE) # remove
 #++++++++++++++++++++Folding+++++++++++++++++++++++++++++++#
 visits.small = subset(visits, spl == TRUE)
 spl = sample.split(visits$LOS, 0.1)
-visits.folded = spread(visits.small, DXCODE, HasDXCODE, fill = FALSE, drop = TRUE)
-visits.dxcodes = data.frame(visits.folded[,seq(-16,-1)])
+visits.small$HasDXCODE = 1
+visits.folded = spread(visits.small, DXCODE, HasDXCODE, fill = 0, drop = TRUE)
 
+#method 1 - group by 
+visits.groupedAll = 
+  visits.folded.selected %>% 
+  group_by(VisitID, Hospital, Age, Race, Gender, ArriveDate, DischargeDate, LOS, ArriveDateDOW, DischargeDateDOW) %>% 
+  summarize_each(funs(sum))
+
+#method 2 - join later
+visits.dxcodes = data.frame(visits.folded[,seq(-16,-2)]) #wanna keep visitID.
+visits.folded.selected = data.frame(visits.folded[,c(-3,-4,-8,-12,-13,-14)]) #limit to models columns
+
+#summarize_each allows me to aggregate everything all columns without naming them
+visits.grouped = visits.dxcodes %>% group_by(VisitID) %>% summarize_each(funs(sum))
+
+#join
+#tODO - do merge expression. Abandonded because I would have do group step anyway.
+
+#Verify grouping
+#id which codes
+tail(sort(table(visits.small$DXCODE)))
+
+#250.00 is popular
+head(visits.groupedAll %>% filter(X250.00==TRUE) %>% select(VisitID, X250.00, X003.9))
 #TODO - figure out grouping. and column name issue. Look at group by.
 #++++++++++++++++++++End folding+++++++++++++++++++++++++++++++#
 
