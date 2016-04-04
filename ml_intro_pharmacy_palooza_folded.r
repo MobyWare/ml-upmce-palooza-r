@@ -106,7 +106,7 @@ save(fit.lm, file = 'C:/Users/dickm/Documents/Projects/ML/DevProjects/ml-upmce-p
 
 visits.val = read.csv("C:/Users/dickm/Documents/Projects/ML/Source/UPMC/Pharmacy/visit_test_panda_dxcode_factors.csv")
 
-#Pre-process data
+#++++++++++++++++++++PRE-PROCESSING DATA+++++++++++++++++++++++++#
 visits.val$VisitID = as.factor(visits.val$VisitID)
 visits.val$Hospital = as.factor(visits.val$Hospital)
 visits.val$Race = as.factor(visits.val$Race)
@@ -119,16 +119,95 @@ visits.val$DischargeDate = as.Date(visits.val$DischargeDate, "%Y-%m-%d")  #chang
 visits.val$ArriveDateDOW = as.factor(weekdays(visits.val$ArriveDate))
 visits.val$DischargeDateDOW = as.factor(weekdays(visits.val$DischargeDate))
 
+#Get uniue DXCODE from training set 
+train.DXCODES = data.frame(DXCODE=as.factor(colnames(train)[seq(8,ncol(train))]))
 
 #Added this because I got an error with the on prediction
 #Remove DXCODE's that are in test but not in train. DXCODE is sparsely populated
-visits.val$DXCODE[which(!(visits.val$DXCODE %in% unique(train$DXCODE)))] = NA
+visits.val$DXCODE[which(!(visits.val$DXCODE %in% unique(train.DXCODES$DXCODE)))] = NA
 #Add in random sample of missing data
 visits.val$DXCODE[is.na(visits.val$DXCODE)] = sample(visits.val$DXCODE[!is.na(visits.val$DXCODE)], sum(is.na(visits.val$DXCODE)))
 
-#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# Need to ensure the factor info in data frame is same as trainin
-levels(visits.val$DXCODE) = levels(train$DXCODE)
+
+#++++++++++++++++++++Folding+++++++++++++++++++++++++++++++#
+visits.val.selected = unique(visits.val[,c(-3,-4,-8,-10,-13,-14,-15,-17)]) #Remove non-feature fields.
+visits.val.selected$HasDXCODE = 1
+
+#For some strange reason this did the grouping.
+#Removed the visitID to avoid overfit.
+visits.val.folded = spread(visits.val.selected, DXCODE, HasDXCODE, fill = 0, drop = TRUE)[,-1]
+
+#Initializing columns in training set but not in validatoin set
+visits.val.folded.recordsToAdd = 
+  train[as.character(train.DXCODES$DXCODE)][which(!(train.DXCODES$DXCODE %in% colnames(visits.val.folded)))][seq(1,nrow(visits.val.folded)),]
+visits.val.folded.recordsToAdd[seq(1,ncol(visits.val.folded.recordsToAdd))] = 0
+visits.val.folded.recordsToAddColNames = colnames(visits.val.folded.recordsToAdd)
+
+#add columns and update column names
+visits.val.folded = cbind(visits.val.folded, visits.val.folded.recordsToAdd)
+#colnames(visits.val.folded) = c(visits.val.folded.colnames, visits.val.folded.recordsToAddColNames)
+
+
+#Verify grouping
+#id which codes
+tail(sort(table(visits.val$DXCODE)))
+
+#296.7 is popular
+visits.val.folded %>% filter((`296.7` > 0) & (`206.90` > 0)) %>% select(ArriveDate, Age, Gender, LOS, `296.7`, `206.90`, `003.0`, Age) %>% top_n(5)
+
+#++++++++++++++++++++END PRE-PROCESSING +++++++++++++++++++++++++#
+
+
+
+#Evalue Method 1 - Linear model+++++++++++++++++++++++++++++++++++++++++#
+#result the RMSE was over 9.00. Ouch!!!
+pred.val.lm = predict(fit.lm, newdata=visits.val.folded)
+
+#RMSE
+sqrt(sum((pred.val.lm - visits.val.folded$LOS)^2)/nrow(visits.val.folded))
+
+#SST
+1 - (sum((pred.val.lm - visits.val.folded$LOS)^2)/sum((mean(visits.val.folded$LOS) - visits.val.folded$LOS)^2))
+
+
+
+
+
+
+#++++++++++++++Evalue Method 5 - Linear model with CV+++++++++++++++++++++++++++++++++++++++++#
+install.packages("DAAG")
+library("DAAG")
+fit.cvlm = cv.lm(data = train, m=3, form.lm = formula(LOS~.))
+#RMSE
+sqrt(sum((fit.cvlm$Predicted - train$LOS)^2)/nrow(train))
+
+#SST
+1 - (sum((fit.cvlm$Predicted - train$LOS)^2)/sum((mean(train$LOS) - train$LOS)^2))
+
+#CV
+#CV - RMSE
+sqrt(sum((fit.cvlm$cvpred - train$LOS)^2)/nrow(train))
+
+#CV - SST
+1 - (sum((fit.cvlm$cvpred - train$LOS)^2)/sum((mean(train$LOS) - train$LOS)^2))
+
+pred.cvlm = predict(fit.cvlm$Predicted, newdata=test)
+
+#RMSE
+sqrt(sum((predLMDOW - test$LOS)^2)/nrow(test))
+
+#SST
+1 - (sum((predLMDOW - test$LOS)^2)/sum((mean(test$LOS) - test$LOS)^2))
+#++++++++++++++++++++VALIDATOIN DATA SET++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#RMSE
+sqrt(sum((pred.cvlm - test$LOS)^2)/nrow(test))
+
+#SST
+1 - (sum((pred.cvlm - test$LOS)^2)/sum((mean(test$LOS) - test$LOS)^2))
+
+
+
+#++++++++++++++END Evalue Method 5 - Linear model with CV+++++++++++++++++++++++++++++++++++++++++#
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 #++++++++++++++++++++++++++END EVAL+++++++++++++++++++++++++#
