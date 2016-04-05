@@ -87,11 +87,9 @@ sqrt(sum((pred.lm - test$LOS)^2)/nrow(test))
 #++++++++++++++++++++END TRAIN MODELS+++++++++++++++++++++++++++++++#
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 
-#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
-#++++++++++++++++++++SAVE MODEL - 1 hour to train++++++++++++++++++++++#
-#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
-# RMSE 3.4 on train. 4.7 on test
 
+#++++++++++++++++++++SAVE MODEL - 1 hour to train++++++++++++++++++++++#
+# RMSE 3.4 on train. 4.7 on test
 #saving model because it took a long time to build
 save(fit.lm, file = 'C:/Users/dickm/Documents/Projects/ML/DevProjects/ml-upmce-palooza-r/fit.lm.rda')
 
@@ -177,19 +175,22 @@ sqrt(sum((pred.val.lm - visits.val.folded$LOS)^2)/nrow(visits.val.folded))
 #++++++++++++++Evalue Method 5 - Linear model with CV+++++++++++++++++++++++++++++++++++++++++#
 install.packages("DAAG")
 library("DAAG")
-fit.cvlm = cv.lm(data = train, m=3, form.lm = formula(LOS~.))
+ptm = proc.time()
+fit.cvlm = cv.lm(data = visits.folded, m=3, form.lm = formula(LOS~.))
+proc.time() - ptm
+
 #RMSE
-sqrt(sum((fit.cvlm$Predicted - train$LOS)^2)/nrow(train))
+sqrt(sum((fit.cvlm$Predicted - visits.folded$LOS)^2)/nrow(visits.folded))
 
 #SST
-1 - (sum((fit.cvlm$Predicted - train$LOS)^2)/sum((mean(train$LOS) - train$LOS)^2))
+1 - (sum((fit.cvlm$Predicted - visits.folded$LOS)^2)/sum((mean(visits.folded$LOS) - visits.folded$LOS)^2))
 
 #CV
 #CV - RMSE
-sqrt(sum((fit.cvlm$cvpred - train$LOS)^2)/nrow(train))
+sqrt(sum((fit.cvlm$cvpred - train$LOS)^2)/nrow(visits.folded))
 
 #CV - SST
-1 - (sum((fit.cvlm$cvpred - train$LOS)^2)/sum((mean(train$LOS) - train$LOS)^2))
+1 - (sum((fit.cvlm$cvpred - train$LOS)^2)/sum((mean(visits.folded$LOS) - visits.folded$LOS)^2))
 
 pred.cvlm = predict(fit.cvlm$Predicted, newdata=test)
 
@@ -199,15 +200,92 @@ sqrt(sum((predLMDOW - test$LOS)^2)/nrow(test))
 #SST
 1 - (sum((predLMDOW - test$LOS)^2)/sum((mean(test$LOS) - test$LOS)^2))
 #++++++++++++++++++++VALIDATOIN DATA SET++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+pred.val.cvlm = predict(fit.cvlm$Predicted, newdata=visits.val.folded)
+
 #RMSE
-sqrt(sum((pred.cvlm - test$LOS)^2)/nrow(test))
+sqrt(sum((pred.cvlm - visits.val.folded$LOS)^2)/nrow(visits.val.folded))
 
 #SST
-1 - (sum((pred.cvlm - test$LOS)^2)/sum((mean(test$LOS) - test$LOS)^2))
+1 - (sum((pred.cvlm - visits.val.folded$LOS)^2)/sum((mean(visits.val.folded$LOS) - visits.val.folded$LOS)^2))
 
 
 
 #++++++++++++++END Evalue Method 5 - Linear model with CV+++++++++++++++++++++++++++++++++++++++++#
+
+
+
+
+
+
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#Method 6 - LASSO with or without standard set
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#install.packages("glmnet")
+library("glmnet")
+#Set up the sparse matrices with dummy variables
+#fix names priort to matrix
+visits.folded.fixedNames = visits.folded
+visits.val.folded.fixedNames = visits.val.folded
+
+colnames(visits.folded.fixedNames) = make.names(colnames(visits.folded))
+colnames(visits.val.folded.fixedNames) = make.names(colnames(visits.val.folded))
+
+
+visits.matrix = as.matrix(sparse.model.matrix(~., visits.folded.fixedNames[-6]))
+visits.val.matrix = as.matrix(sparse.model.matrix(~., visits.val.folded.fixedNames[-6]))
+
+#Train model
+ptm = proc.time()
+fit.LASSO = glmnet(y = visits.folded.fixedNames$LOS, x = visits.matrix, standardize = TRUE)
+proc.time() - ptm
+
+
+plot(fit.LASSO)
+
+pred.LASSO = predict(fit.cvLASSO, visits.val.matrix)
+
+#RMSE
+sqrt(sum((pred.LASSO - visits.val.folded.fixedNames$LOS)^2)/nrow(visits.val.folded.fixedNames))
+
+#SST
+1 - (sum((pred.LASSO - visits.val.folded.fixedNames$LOS)^2)/sum((mean(visits.val.folded.fixedNames$LOS) - visits.val.folded.fixedNames$LOS)^2))
+
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#Method 7 - CV LASSO
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#install.packages("glmnet")
+library("glmnet")
+#Set up the sparse matrices with dummy variables
+#fix names priort to matrix
+visits.folded.fixedNames = visits.folded
+visits.val.folded.fixedNames = visits.val.folded
+
+colnames(visits.folded.fixedNames) = make.names(colnames(visits.folded))
+colnames(visits.val.folded.fixedNames) = make.names(colnames(visits.val.folded))
+
+
+visits.matrix = as.matrix(sparse.model.matrix(~., visits.folded.fixedNames[-6]))
+visits.val.matrix = as.matrix(sparse.model.matrix(~., visits.val.folded.fixedNames[-6]))
+
+#Train model
+ptm = proc.time()
+fit.cvLASSO = cv.glmnet(y = visits.folded.fixedNames$LOS, x = visits.matrix)
+proc.time() - ptm
+
+#++++++++++++++++++++SAVE MODEL - 1 hour to train++++++++++++++++++++++#
+# RMSE 5.94 on val
+#saving model because it took a 10 hours to build
+save(fit.cvLASSO, file = 'C:/Users/dickm/Documents/Projects/ML/DevProjects/ml-upmce-palooza-r/fit.cvLASSO.rda')
+
+plot(fit.cvLASSO)
+
+pred.cvLASSO = predict(fit.cvLASSO, visits.val.matrix)
+
+#RMSE
+sqrt(sum((pred.cvLASSO - visits.val.folded.fixedNames$LOS)^2)/nrow(visits.val.folded.fixedNames))
+
+#SST
+1 - (sum((pred.cvLASSO - visits.val.folded.fixedNames$LOS)^2)/sum((mean(visits.val.folded.fixedNames$LOS) - visits.val.folded.fixedNames$LOS)^2))
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
 #++++++++++++++++++++++++++END EVAL+++++++++++++++++++++++++#
